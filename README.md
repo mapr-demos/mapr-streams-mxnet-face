@@ -141,27 +141,32 @@ cp model-r50-am-lfw/model-0000.params consumer/models/
 
 # Start the nvidia_pacc container on the node with a GPU
 
+```
 docker run -it --runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=all -e NVIDIA_DRIVER_CAPABILITIES=compute,utility -e NVIDIA_REQUIRE_CUDA="cuda>=8.0" --cap-add SYS_ADMIN --cap-add SYS_RESOURCE --device /dev/fuse --memory 0 -e MAPR_CLUSTER=gcloud.cluster.com -e MAPR_MEMORY=0 -e MAPR_MOUNT_PATH=/mapr -e MAPR_TZ=America/Los_Angeles -e MAPR_CONTAINER_USER=mapr -e MAPR_CONTAINER_UID=500 -e MAPR_CONTAINER_GROUP=mapr -e MAPR_CONTAINER_GID=500 -e MAPR_CONTAINER_PASSWORD=mapr -e MAPR_CLDB_HOSTS=gcloudnodea.c.mapr-demos.internal -v /sys/fs/cgroup:/sys/fs/cgroup:ro --security-opt apparmor:unconfined -p 5000:5000 -p 5901:5901 -v /home/mapr/mapr-streams-mxnet-face:/tmp/mapr-streams-mxnet-face:ro --name pacc_nvidia pacc_nvidia
+```
 
+## Install some stuff needed to use python mapr streams 
 
-  ## (this was already in the dockerfile, so no need to repeat) Install some stuff needed to use python mapr streams
+This was already in the dockerfile, so maybe no need to repeat:
 
-    <!-- sudo apt-get update
+```
+    sudo apt-get update
     sudo apt-get install vim python python-pip -y
     pip install --global-option=build_ext --global-option="--library-dirs=/opt/mapr/lib" --global-option="--include-dirs=/opt/mapr/include/" http://package.mapr.com/releases/MEP/MEP-4.0.0/mac/mapr-streams-python-0.9.2.tar.gz
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/mapr/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server/
     ln -s /opt/mapr/lib/libMapRClient.so.1 /opt/mapr/lib/libMapRClient_c.so
     # verify that it works.
-    LD_PRELOAD=/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server/libjvm.so python -c "from mapr_streams_python import Producer" -->
-
-  ## Install VNC (required by the producer)
-
+    LD_PRELOAD=/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server/libjvm.so python -c "from mapr_streams_python import Producer"
+```
+## Install VNC (required by the producer)
+```
   sudo apt-get update
   sudo apt-get install tightvncserver aptitude tasksel -y
   # this will take 4 minutes. Specify 29 and 1 for US keyboard:
   sudo apt-get install xfce4 xfce4-goodies -y
   vncserver
   export DISPLAY=347d53c747ce:1  <-- use whatever string outputs after you start vncserver
+```
 
 # convenient aliases:
 
