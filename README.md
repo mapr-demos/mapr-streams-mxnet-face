@@ -1,8 +1,8 @@
-# Summary
+# Executive Summary
 
 <img src="images/architecture.png" width="80%">
 
-This project primarily focuses on demonstrating the following two points:
+This project focuses on demonstrating the following two points:
 
 1. **MapR Streams (MapR-ES) simplifies buffering and distribution of fast data to a dynamic set of concurrent stream consumers.** This is made possible via stream partitioning, which makes it possible to run multiple concurrent stream processors and thereby speed up video processing by distributing video frames to multiple asynchronous face detectors.
 2. **MapR client Docker containers (MapR PACC) enable workloads to elastically scale in the cloud.** This makes it possible to utilize hardware more efficiently and meet SLAs more effectively.
