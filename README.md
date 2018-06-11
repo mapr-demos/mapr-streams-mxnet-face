@@ -7,6 +7,10 @@ This project focuses on demonstrating the following two points:
 1. **MapR Streams ([MapR-ES](https://mapr.com/products/mapr-streams/)) makes it easier to distribute fast data, like video.** It simplifies the buffering and connection management that's normally complicated when you have a dynamic number of concurrent stream consumers. MapR-ES also allows you to partition streams so you can split up time consuming tasks like face detection across multiple consumers without duplicating data.
 2. **MapR client containers ([MapR PACC](https://maprdocs.mapr.com/home/AdvancedInstallation/UsingtheMapRPACC.html)) for Docker enable workloads to elastically scale in the cloud.** This makes it possible to utilize hardware more efficiently and meet SLAs more effectively.
 
+## Demo Video:
+
+<a href="https://youtu.be/Pn1-fTrwtnk"><img src="images/youtube_video.png" width="30%"></a>
+
 # Introduction
 
 <a href="https://vimeo.com/89718925"><img src="images/sample_video_screenshot.png" width="40%" align="right"></a>
