@@ -270,6 +270,6 @@ The following Face Detection models were used in this project:
 * [InsightFace](https://github.com/deepinsight/insightface)
 
 Here is a good video to use for this demo, since it shows many faces:
-* ["People in Frankfurt": https://vimeo.com/89718925](https://vimeo.com/89718925)
+* ["People in Frankfurt"](https://vimeo.com/89718925)
 
 
