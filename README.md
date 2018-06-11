@@ -266,10 +266,10 @@ The video will show up at the port you chose (go to 'http://localhost:5010').
 # References:
 
 The following Face Detection models were used in this project:
-[MXNet](https://github.com/tornadomeet/mxnet-face) 
-[InsightFace](https://github.com/deepinsight/insightface)
+* [MXNet](https://github.com/tornadomeet/mxnet-face) 
+* [InsightFace](https://github.com/deepinsight/insightface)
 
 Here is a good video to use for this demo, since it shows many faces:
-["People in Frankfurt": https://vimeo.com/89718925](https://vimeo.com/89718925)
+* ["People in Frankfurt": https://vimeo.com/89718925](https://vimeo.com/89718925)
 
 
