@@ -59,31 +59,7 @@ Pub/sub streaming systems like MapR Streams have traditionally been thought of a
 
 Provision a 3 node MapR cluster, and an ubuntu machine with a GPU. This will be our mapr client and docker host.
 
-# Create the Dockerfile
-
-Create a MapR PACC image, as described [here](https://maprdocs.mapr.com/52/AdvancedInstallation/CreatingPACCImage.html):
-
-```
-wget http://package.mapr.com/releases/installer/mapr-setup.sh -P /tmp
-chmod 700 ./mapr-setup.sh
-./mapr-setup.sh docker client
-```
-
-Make sure to create PACC with ubuntu16.
-
-Open `./docker_images/client/Dockerfile` and replace the "FROM" command to following:
-
-```FROM nvidia/cuda:9.0-base-ubuntu16.04```
-
-Now build the new PACC image with cuda included:
-
-```
-cd ./docker_images/client/
-docker build -t pacc_nvidia:cuda-9.0-base .
-```
-
-
-# Create streams on the mapr cluster
+## Create streams on the mapr cluster
 
 ```
 maprcli stream delete -path /tmp/rawvideostream
@@ -105,16 +81,29 @@ maprcli stream topic list -path /tmp/identifiedstream -json
 maprcli stream topic list -path /tmp/processedvideostream -json
 ```
 
-Monitor stream sizes like this:
+## (optional) Monitor stream sizes like this:
 
 ```
 echo -e "\nSTREAM MONITORING:"; UPLINE=$(tput cuu1); ERASELINE=$(tput el); echo -e "\n\n\n"; while true; do x=`maprcli stream topic list -path /tmp/rawvideostream -json | grep physicalsize | sed -s 's/.*://' | tr -d ','`; y=`maprcli stream topic list -path /tmp/processedvideostream -json | grep physicalsize | sed -s 's/.*://' | tr -d ','`; z=`maprcli stream topic list -path /tmp/identifiedstream -json | grep physicalsize | sed -s 's/.*://' | tr -d ','`; echo -e "$UPLINE$ERASELINE$UPLINE$ERASELINE$UPLINE$ERASELINE\c"; echo -e "/tmp/rawvideostream size: $x\n/tmp/processedvideostream size: $y\n/tmp/identifiedstream size: $z"; done
 ```
 
-# Build an nvidia_pacc image
-This requires access to MapR's internal docker repo, so do this on your laptop with the Global Connect VPN established.
+## Build a stream consumer (face recognition worker) Docker image
 
-Dockerfile:
+Create a MapR PACC image, as described [here](https://maprdocs.mapr.com/52/AdvancedInstallation/CreatingPACCImage.html):
+
+```
+wget http://package.mapr.com/releases/installer/mapr-setup.sh -P /tmp
+chmod 700 ./mapr-setup.sh
+./mapr-setup.sh docker client
+```
+
+Make sure to create PACC with ubuntu16.
+
+Open `./docker_images/client/Dockerfile` and replace the "FROM" command to following:
+
+```FROM nvidia/cuda:9.0-base-ubuntu16.04```
+
+Also, add the apt-get and pip install commands shown in the following Dockerfile example:
 
 ```
 FROM pacc_nvidia:cuda-9.0-base
@@ -134,25 +123,24 @@ RUN pip install --global-option=build_ext --global-option="--library-dirs=/opt/m
 RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/mapr/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server/
 ```
 
+Now build the new PACC image with cuda included:
+
 ```
-cd development/mapr-streams-mxnet-face/
-docker build .
-docker tag 8c5bfd4dd40d pacc_nvidia:latest
-docker save -o pacc_nvidia_v3 pacc_nvidia
+docker build -t pacc_nvidia:cuda-9.0-base .
+```
+
+Copy the docker image to the VM where you have a GPU:
+
+```
+docker save -o pacc_nvidia_v1 pacc_nvidia
 rsync -vapr --progress --partial --stats pacc_nvidia_v3 mapr@gcloud-mapr-client:~/
 ```
 
-## Connect to the GPU enabled mapr-client
+ssh to the GPU enabled mapr-client and load said docker image
 
-### install docker
+`docker load -i pacc_nvidia_v1`
 
-`docker load -i pacc_nvidia`
-
-## Download Dong's github repo and face detection model files
-
-```
-git clone https://github.com/mengdong/mapr-streams-mxnet-face
-```
+## Download face detection model files
 
 Download `mxnet-face-fr50-0000.params` from
 [dropbox](https://www.dropbox.com/sh/yqn8sken82gpmfr/AAC8WNSaA1ADVuUq8yaPQF0da?dl=0)
@@ -178,9 +166,9 @@ cp model-r50-am-lfw/model-0000.params consumer/models/
 docker run -it --runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=all -e NVIDIA_DRIVER_CAPABILITIES=compute,utility -e NVIDIA_REQUIRE_CUDA="cuda>=8.0" --cap-add SYS_ADMIN --cap-add SYS_RESOURCE --device /dev/fuse --memory 0 -e MAPR_CLUSTER=gcloud.cluster.com -e MAPR_MEMORY=0 -e MAPR_MOUNT_PATH=/mapr -e MAPR_TZ=America/Los_Angeles -e MAPR_CONTAINER_USER=mapr -e MAPR_CONTAINER_UID=500 -e MAPR_CONTAINER_GROUP=mapr -e MAPR_CONTAINER_GID=500 -e MAPR_CONTAINER_PASSWORD=mapr -e MAPR_CLDB_HOSTS=gcloudnodea.c.mapr-demos.internal -v /sys/fs/cgroup:/sys/fs/cgroup:ro --security-opt apparmor:unconfined -p 5000:5000 -p 5901:5901 -v /home/mapr/mapr-streams-mxnet-face:/tmp/mapr-streams-mxnet-face:ro --name pacc_nvidia pacc_nvidia
 ```
 
-## Install some stuff needed to use python mapr streams 
+## Install some stuff needed to use MapR Streams from Python
 
-This was already in the dockerfile, so maybe no need to repeat:
+Not sure if this is needed. It was already in the Dockerfile, so maybe no need to repeat:
 
 ```
     sudo apt-get update
@@ -191,7 +179,9 @@ This was already in the dockerfile, so maybe no need to repeat:
     # verify that it works.
     LD_PRELOAD=/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server/libjvm.so python -c "from mapr_streams_python import Producer"
 ```
+
 ## Install VNC (required by the producer)
+
 ```
   sudo apt-get update
   sudo apt-get install tightvncserver aptitude tasksel -y
@@ -201,7 +191,7 @@ This was already in the dockerfile, so maybe no need to repeat:
   export DISPLAY=347d53c747ce:1  <-- use whatever string outputs after you start vncserver
 ```
 
-# convenient aliases:
+### Convenient bash aliases:
 
 `alias detect_faces='docker run -d -it --runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=all -e NVIDIA_DRIVER_CAPABILITIES=compute,utility -e NVIDIA_REQUIRE_CUDA="cuda>=8.0" --cap-add SYS_ADMIN --cap-add SYS_RESOURCE --device /dev/fuse --memory 0 -e MAPR_CLUSTER=gcloud.cluster.com -e MAPR_MEMORY=0 -e MAPR_MOUNT_PATH=/mapr -e MAPR_TZ=America/Los_Angeles -e MAPR_CONTAINER_USER=mapr -e MAPR_CONTAINER_UID=500 -e MAPR_CONTAINER_GROUP=mapr -e MAPR_CONTAINER_GID=500 -e MAPR_CONTAINER_PASSWORD=mapr -e MAPR_CLDB_HOSTS=gcloudnodea.c.mapr-demos.internal -v /sys/fs/cgroup:/sys/fs/cgroup:ro --security-opt apparmor:unconfined -v /home/mapr/mapr-streams-mxnet-face:/tmp/mapr-streams-mxnet-face:ro --name pacc_nvidia2 pacc_nvidia & (sleep 15; docker exec -it pacc_nvidia2 su mapr -c "cd /tmp/mapr-streams-mxnet-face/consumer/deploy; LD_PRELOAD=/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server/libjvm.so python /tmp/mapr-streams-mxnet-face/consumer/deploy/mapr_consumer.py")'`
 
@@ -273,4 +263,6 @@ The following Face Detection models were used in this project:
 Here is a good video to use for this demo, since it shows many faces:
 * ["People in Frankfurt"](https://vimeo.com/89718925)
 
+Dong Meng originally created this demo. Here is his original repository:
+* [https://github.com/mengdong/mapr-streams-mxnet-face](https://github.com/mengdong/mapr-streams-mxnet-face)
 
