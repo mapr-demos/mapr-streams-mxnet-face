@@ -45,9 +45,9 @@ To see how fast you can classify a video without a GPU, change `ctx = mx.gpu(arg
 
 # Can pub/sub streaming really handle video???
 
-Pub/sub streaming systems like Kafka and MapR Streams have traditionally been thought of as a solution for inter-service communication, rather than a distribution mechanism for fast data streams like video. However, this demo proves that video can be distributed through pub/sub systems like MapR Streams, and in fact doing so offers advantages with regard to buffering data between fast producers and slower consumers, as well as distributing fast data across a set of concurrent asynchronous stream processors.
-
-However, you can't expect video frames to be processed by concurrent consumers in order. Although expecting ordering from a Kafka-like pub/sub system is not a best practice, it's still possible to get value from the face detection data even if consumers process stream messages out of order. For example, by persisting that data in a database, we can query it using BI tools to answer questions with real business value, like what are people looking at (smart spaces), when do TV channels run commercial breaks (ad analytics), when does a person enter a passageway (security), etc.?
+Pub/sub streaming systems like MapR Streams have traditionally been thought of as a solution for inter-service communication, rather than a distribution mechanism for fast data streams such as video. However, this demo proves that video can be distributed through pub/sub systems like MapR Streams, and in fact doing so offers two distinct advantages: 
+1. they buffer data between fast producers and slower consumers
+2. they simplify the processes of broadcasting fast data across a group of concurrent stream processors.
 
 # Functional Spec
 
