@@ -40,7 +40,8 @@ Real-time face detection requires high speed processors. Video processing on tra
 
 To see how fast you can classify a video without a GPU, change `ctx = mx.gpu(args.gpuid)` to `ctx = mx.cpu(0)` in `consumer/deploy/mapr_consumer.py`. 
 
-![images/cpu_vs_gpu.png](images/cpu_vs_gpu.png)
+<img src="images/cpu_vs_gpu.png" width="50%">
+
 
 # Can pub/sub streaming really handle video???
 
