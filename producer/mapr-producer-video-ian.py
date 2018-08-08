@@ -3,7 +3,6 @@ import numpy as np
 import cv2,time
 import sys
 
-#p = Producer({'streams.producer.default.stream': '/mapr/cluster3/tmp/rawvideostream'})
 p = Producer({'streams.producer.default.stream': '/mapr/gcloud.cluster.com/tmp/rawvideostream'})
 if len(sys.argv) > 1:
     video_file = str(sys.argv[1])
