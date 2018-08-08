@@ -26,13 +26,13 @@ In this project we demonstrate an application designed to detect faces in multip
 
 ## Why Docker?
 
-Docker makes it easy to run multiple video producers and consumers (face detectors), and when they're packaged with the MapR PACC (Persistent Application Client Container), they can maintain access to a MapR cluster and the video streams hosted on that cluster even though the containers themselves are ephemeral. 
+Docker makes it easy to run multiple video producers and consumers (face detectors), and when they're packaged with the [MapR PACC](https://maprdocs.mapr.com/home/AdvancedInstallation/UsingtheMapRPACC.html) (Persistent Application Client Container), they can maintain access to a MapR cluster and the video streams hosted on that cluster even though the containers themselves are ephemeral. 
 
 In other words, by dockerizing the video consumers, face detection processes can be provisioned on-the-fly when new video feeds demand faster processing, and discovering those streams will never be a problem since MapR’s global namespace ensures stream locations never change.
 
 ## Why distributed Pub/Sub?
 
-Distributed pub/sub messaging services are typically used for communication between services. When messages are produced faster than they are consumed, these services store the unconsumed messages in memory. As such, they provide a convenient decoupleing that allows producers to send data to consumers without the burdon of maintaining connections across a variable number of consumers.
+Distributed pub/sub messaging services are typically used for communication between services. When messages are produced faster than they are consumed, these services store the unconsumed messages in memory. As such, they provide a convenient decoupling that allows producers to send data to consumers without the burden of maintaining connections across a variable number of consumers.
 
 # Why GPUs?
 
@@ -142,6 +142,13 @@ ssh to the GPU enabled mapr-client and load said docker image
 
 ## Download face detection model files
 
+Run the steps in this section on the VM where you have a GPU. This is the VM that will be trying to detect faces, so here we'll be setting it up with the face detection model.
+
+```
+git clone https://github.com/mapr-demos/mapr-streams-mxnet-face
+cd mapr-streams-mxnet-face
+```
+
 Download `mxnet-face-fr50-0000.params` from
 [dropbox](https://www.dropbox.com/sh/yqn8sken82gpmfr/AAC8WNSaA1ADVuUq8yaPQF0da?dl=0)
 
@@ -162,22 +169,16 @@ cp model-r50-am-lfw/model-0000.params consumer/models/
 
 # Start the nvidia_pacc container on the node with a GPU
 
+Now we're ready to run the face detector. Run the following command on the VM with the GPU:
+
 ```
 docker run -it --runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=all -e NVIDIA_DRIVER_CAPABILITIES=compute,utility -e NVIDIA_REQUIRE_CUDA="cuda>=8.0" --cap-add SYS_ADMIN --cap-add SYS_RESOURCE --device /dev/fuse --memory 0 -e MAPR_CLUSTER=gcloud.cluster.com -e MAPR_MEMORY=0 -e MAPR_MOUNT_PATH=/mapr -e MAPR_TZ=America/Los_Angeles -e MAPR_CONTAINER_USER=mapr -e MAPR_CONTAINER_UID=500 -e MAPR_CONTAINER_GROUP=mapr -e MAPR_CONTAINER_GID=500 -e MAPR_CONTAINER_PASSWORD=mapr -e MAPR_CLDB_HOSTS=gcloudnodea.c.mapr-demos.internal -v /sys/fs/cgroup:/sys/fs/cgroup:ro --security-opt apparmor:unconfined -p 5000:5000 -p 5901:5901 -v /home/mapr/mapr-streams-mxnet-face:/tmp/mapr-streams-mxnet-face:ro --name pacc_nvidia pacc_nvidia
 ```
 
-## Install some stuff needed to use MapR Streams from Python
-
-Not sure if this is needed. It was already in the Dockerfile, so maybe no need to repeat:
+If you get the following error, that probably means you haven't attached a GPU to your VM, or your GPU is not compatible with Nvidia CUDA libraries. We recommend attaching an Nvidia Tesla K80 GPU.
 
 ```
-    sudo apt-get update
-    sudo apt-get install vim python python-pip -y
-    pip install --global-option=build_ext --global-option="--library-dirs=/opt/mapr/lib" --global-option="--include-dirs=/opt/mapr/include/" http://package.mapr.com/releases/MEP/MEP-4.0.0/mac/mapr-streams-python-0.9.2.tar.gz
-    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/mapr/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server/
-    ln -s /opt/mapr/lib/libMapRClient.so.1 /opt/mapr/lib/libMapRClient_c.so
-    # verify that it works.
-    LD_PRELOAD=/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server/libjvm.so python -c "from mapr_streams_python import Producer"
+docker: Error response from daemon: OCI runtime create failed: container_linux.go:348: starting container process caused "process_linux.go:402: container init caused \"process_linux.go:385: running prestart hook 1 caused \\\"error running hook: exit status 1, stdout: , stderr: exec command: [/usr/bin/nvidia-container-cli --load-kmods configure --ldconfig=@/sbin/ldconfig --device=all --compute --utility --require=cuda>=8.0 --pid=1375 /var/lib/docker/devicemapper/mnt/c5a646ba12b4c4406373b78189294321fd262b932fbbdfc7eea31046a3c133c4/rootfs]\\\\nnvidia-container-cli: initialization error: cuda error: unknown error\\\\n\\\"\"": unknown.
 ```
 
 ## Install VNC (required by the producer)
@@ -193,9 +194,15 @@ Not sure if this is needed. It was already in the Dockerfile, so maybe no need t
 
 ### Convenient bash aliases:
 
+Alias for starting the face detector on the VM with a GPU:
+
 `alias detect_faces='docker run -d -it --runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=all -e NVIDIA_DRIVER_CAPABILITIES=compute,utility -e NVIDIA_REQUIRE_CUDA="cuda>=8.0" --cap-add SYS_ADMIN --cap-add SYS_RESOURCE --device /dev/fuse --memory 0 -e MAPR_CLUSTER=gcloud.cluster.com -e MAPR_MEMORY=0 -e MAPR_MOUNT_PATH=/mapr -e MAPR_TZ=America/Los_Angeles -e MAPR_CONTAINER_USER=mapr -e MAPR_CONTAINER_UID=500 -e MAPR_CONTAINER_GROUP=mapr -e MAPR_CONTAINER_GID=500 -e MAPR_CONTAINER_PASSWORD=mapr -e MAPR_CLDB_HOSTS=gcloudnodea.c.mapr-demos.internal -v /sys/fs/cgroup:/sys/fs/cgroup:ro --security-opt apparmor:unconfined -v /home/mapr/mapr-streams-mxnet-face:/tmp/mapr-streams-mxnet-face:ro --name pacc_nvidia2 pacc_nvidia & (sleep 15; docker exec -it pacc_nvidia2 su mapr -c "cd /tmp/mapr-streams-mxnet-face/consumer/deploy; LD_PRELOAD=/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server/libjvm.so python /tmp/mapr-streams-mxnet-face/consumer/deploy/mapr_consumer.py")'`
 
+Alias for starting the video producer on your laptop:
+
 `alias run_producer="docker run --rm -it --cap-add SYS_ADMIN --cap-add SYS_RESOURCE --device /dev/fuse --memory 0 -e MAPR_CLUSTER=gcloud.cluster.com -e MAPR_MEMORY=0 -e MAPR_MOUNT_PATH=/mapr -e MAPR_TZ=America/Los_Angeles -e MAPR_CONTAINER_USER=mapr -e MAPR_CONTAINER_UID=500 -e MAPR_CONTAINER_GROUP=mapr -e MAPR_CONTAINER_GID=500 -e MAPR_CONTAINER_PASSWORD=mapr -e MAPR_CLDB_HOSTS=gcloudnodea.c.mapr-demos.internal -e DISPLAY=192.168.0.38:0 -v /sys/fs/cgroup:/sys/fs/cgroup:ro --security-opt apparmor:unconfined -v /Users/idownard/development/mapr-streams-mxnet-face:/tmp/mapr-streams-mxnet-face:ro --name pacc_nvidia pacc_nvidia"`
+
+Alias for starting the video producer on a mapr node:
 
 `alias monitor_streams='echo -e "\nSTREAM MONITORING:"; UPLINE=$(tput cuu1); ERASELINE=$(tput el); echo -e "\n\n\n"; while true; do x=`maprcli stream topic list -path /tmp/rawvideostream -json | grep physicalsize | sed -s 's/.*://' | tr -d ','`; y=`maprcli stream topic list -path /tmp/processedvideostream -json | grep physicalsize | sed -s 's/.*://' | tr -d ','`; z=`maprcli stream topic list -path /tmp/identifiedstream -json | grep physicalsize | sed -s 's/.*://' | tr -d ','`; echo -e "$UPLINE$ERASELINE$UPLINE$ERASELINE$UPLINE$ERASELINE\c"; echo -e "/tmp/rawvideostream size: $x\n/tmp/processedvideostream size: $y\n/tmp/identifiedstream size: $z"; done'`
 
@@ -220,33 +227,31 @@ watch --color -n1.0 gpustat --color
 
 # Run producer
 
-(optional) Here's how to run the producer on a MAC:
+You can run the producer on any docker host as long as it can connect to the MapR cluster.  I like to run it on my macbook where I can map a docker volume to ~/development/mapr-streams-mxnet-face where I keep the video file I want to produce.
+
+### Here's how to run the producer on a macbook:
+
+Download the pacc_nvidia docker image we built earlier to your macbook and load it into Docker CE for Mac with the command `docker load -i pacc_nvidia`.
+
+The producer will open a video player. Since I run the producer in a linux container, I first need to open xquartz on my mac and run `xhost +` so I can redirect the container's X11 display.
+
+Now, start the producer with this command:
 
 ```
-docker run -it --rm --cap-add SYS_ADMIN --cap-add SYS_RESOURCE --device /dev/fuse --memory 0 -e MAPR_CLUSTER=gcloud.cluster.com -e MAPR_MEMORY=0 -e MAPR_MOUNT_PATH=/mapr -e MAPR_TZ=America/Los_Angeles -e MAPR_CONTAINER_USER=mapr -e MAPR_CONTAINER_UID=500 -e MAPR_CONTAINER_GROUP=mapr -e MAPR_CONTAINER_GID=500 -e MAPR_CONTAINER_PASSWORD=mapr -e MAPR_CLDB_HOSTS=gcloudnodea.c.mapr-demos.internal -v /sys/fs/cgroup:/sys/fs/cgroup:ro --security-opt apparmor:unconfined -v ~/development/mapr-streams-mxnet-face:/tmp/mapr-streams-mxnet-face:ro --name pacc_nvidia pacc_nvidia
+docker run -it --rm --cap-add SYS_ADMIN --cap-add SYS_RESOURCE --device /dev/fuse --memory 0 -e MAPR_CLUSTER=gcloud.cluster.com -e MAPR_MEMORY=0 -e MAPR_MOUNT_PATH=/mapr -e MAPR_TZ=America/Los_Angeles -e MAPR_CONTAINER_USER=mapr -e MAPR_CONTAINER_UID=500 -e MAPR_CONTAINER_GROUP=mapr -e MAPR_CONTAINER_GID=500 -e MAPR_CONTAINER_PASSWORD=mapr -e MAPR_CLDB_HOSTS=gcloudnodea.c.mapr-demos.internal -e DOCKER_HOST_IP=`ifconfig en0 | awk '$1 == "inet" {print $2}'` -v /sys/fs/cgroup:/sys/fs/cgroup:ro --security-opt apparmor:unconfined -v ~/development/mapr-streams-mxnet-face:/tmp/mapr-streams-mxnet-face:ro --name pacc_nvidia pacc_nvidia
 ln -s /opt/mapr/lib/libMapRClient.so.1 /opt/mapr/lib/libMapRClient_c.so
-cp -R /tmp/mapr-streams-mxnet-face/producer ~
-cd ~mapr/producer/
-open xquartz and run xhost +
-export DISPLAY=192.168.0.38:0  
-export LD_PRELOAD=/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server/libjvm.so 
-python /tmp/mapr-streams-mxnet-face/producer/mapr-producer-video-ian.py
-
-docker exec -it <container id> /bin/bash
-su mapr
-export DISPLAY=d74e8b8e748c:1
 cp -R /tmp/mapr-streams-mxnet-face/producer ~
 cd ~mapr/producer/
 vi mapr-producer-video.py
   update DLcluster to gcloud.cluster.com
   :%s/DLcluster/gcloud.cluster.com/g
-
-LD_PRELOAD=/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server/libjvm.so python /tmp/mapr-streams-mxnet-face/producer/mapr-producer-video-ian.py /tmp/mapr-streams-mxnet-face/producer/PeopleInFrankfurt-small.mp4
+export DISPLAY=$DOCKER_HOST_IP:0
+LD_PRELOAD=/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server/libjvm.so python mapr-producer-video-ian.py videos/PeopleInFrankfurt-small.mp4
 ```
 
-# Start the Fuse webapp so you can see the box annotated video stream:
+# Start the HTML video viewer so you can see the box annotated video stream:
 
-(you can run this on your mac):
+(you can run this on your macbook):
 
 ```
 docker run -it --rm --privileged --cap-add SYS_ADMIN --cap-add SYS_RESOURCE --device /dev/fuse -e MAPR_CLUSTER=gcloud.cluster.com  -e MAPR_CLDB_HOSTS=gcloudnodea -e MAPR_CONTAINER_USER=mapr -e MAPR_CONTAINER_UID=5000 -e MAPR_CONTAINER_GROUP=mapr  -e MAPR_CONTAINER_GID=5000 -e MAPR_MOUNT_PATH=/mapr -e GROUPID=500 -e STREAM=/tmp/identifiedstream -e TOPIC=all -e TIMEOUT=0.035 -e PORT=5010 -p 5010:5010 --add-host "gcloudnodea":10.138.0.5 --name flask_client mengdong/mapr-pacc-mxnet:5.2.2_3.0.1_ubuntu16_yarn_fuse_hbase_streams_flask_client_arguments
