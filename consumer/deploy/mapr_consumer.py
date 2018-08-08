@@ -100,7 +100,7 @@ if __name__ == '__main__':
     model = face_embedding.FaceModel(args.gpuid)
 
     c = Consumer({'group.id': args.groupid,
-              'default.topic.config': {'auto.offset.reset': 'earliest', 'enable.auto.commit': 'false'}})
+              'default.topic.config': {'auto.offset.reset': 'latest', 'enable.auto.commit': 'false'}})
     c.subscribe([args.readstream+':'+args.readtopic])
     running = True
     p = Producer({'streams.producer.default.stream': args.writestream2})

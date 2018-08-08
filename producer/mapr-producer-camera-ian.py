@@ -1,8 +1,14 @@
 from mapr_streams_python import Producer
 import numpy as np
-import cv2, time, pickle
+import sys, cv2, time, pickle
 
 p = Producer({'streams.producer.default.stream': '/mapr/gcloud.cluster.com/tmp/rawvideostream'})
+if len(sys.argv) > 1:
+    fps = float(sys.argv[1])
+else:
+    print("USAGE: Frames-per-second must be specified as a command line argument")
+    exit(1)
+
 cap = cv2.VideoCapture(0)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH,480)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT,360)
