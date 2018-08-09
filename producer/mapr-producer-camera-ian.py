@@ -13,7 +13,9 @@ cap = cv2.VideoCapture(0)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH,480)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT,360)
 
+frame_counter = 0
 while (cap.isOpened):
+    frame_counter += 1
     # Capture frame-by-frame
     ret, frame = cap.read()
     # Our operations on the frame come here
@@ -25,9 +27,9 @@ while (cap.isOpened):
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
-    p.produce('topic1', jpeg.tostring(), str(cap.get(cv2.CAP_PROP_POS_MSEC)))
-    print("video position: "+str(cap.get(cv2.CAP_PROP_POS_MSEC))+"ms")
-    time.sleep(1)
+    p.produce('topic1', jpeg.tostring(), str(frame_counter))
+    print("frame: "+str(frame_counter))
+    time.sleep(1/fps)
 
 p.flush()
 cap.release()

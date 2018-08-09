@@ -73,8 +73,6 @@ maprcli stream edit -path /tmp/processedvideostream -produceperm p -consumeperm 
 maprcli stream topic create -path /tmp/processedvideostream -topic topic1 -partitions 1
 maprcli stream create -path /tmp/identifiedstream
 maprcli stream edit -path /tmp/identifiedstream -produceperm p -consumeperm p -topicperm p
-#maprcli stream topic create -path /tmp/identifiedstream -topic sam -partitions 1
-#maprcli stream topic create -path /tmp/identifiedstream -topic frances -partitions 1
 maprcli stream topic create -path /tmp/identifiedstream -topic all -partitions 1
 maprcli stream topic list -path /tmp/rawvideostream -json
 maprcli stream topic list -path /tmp/identifiedstream -json
