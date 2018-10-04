@@ -41,7 +41,6 @@ while (cap.isOpened):
     image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     image, scale = resize(image, 240, 320)
     ret, jpeg = cv2.imencode('.png', image)
-    print("jpeg: " + str(len(jpeg)))
     # Display the resulting frame
     cv2.imshow('frame',frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
